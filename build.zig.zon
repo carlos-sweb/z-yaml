@@ -1,0 +1,17 @@
+.{
+    .name = .zyaml,
+    .version = "0.1.0",
+    .minimum_zig_version = "0.16.0",
+    .fingerprint = 0xbe3579ebe23ce35c,
+    .description = "Pure-Zig, dependency-free YAML subset parser/stringifier over JSValue",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src/",
+        "README.md",
+    },
+    .dependencies = .{
+        .zvalue = .{ .path = "../z-value" },
+        .znumber = .{ .path = "../z-number" },
+    },
+}
