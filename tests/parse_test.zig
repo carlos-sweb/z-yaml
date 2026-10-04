@@ -211,3 +211,36 @@ test "parse rejects a mismatched indentation level" {
         \\ b: 2
     ));
 }
+
+test "parse incomplete flow array releases transferred string once" {
+    try testing.expectError(error.UnexpectedEnd, zyaml.parse(testing.allocator, "[\"x\""));
+}
+
+test "parse incomplete flow object releases transferred string once" {
+    try testing.expectError(error.UnexpectedEnd, zyaml.parse(testing.allocator, "{a: \"x\""));
+}
+
+test "parse incomplete nested flow releases completed children" {
+    try testing.expectError(error.UnexpectedEnd, zyaml.parse(testing.allocator, "[[\"a\"], {\"b\""));
+}
+
+test "parse block collections release prior children on later error" {
+    const inputs = [_][]const u8{
+        "- hello\n- \"\\q\"",
+        "-\n  - hello\n- \"\\q\"",
+        "- name: hello\n- name: \"\\q\"",
+        "a: hello\nb: \"\\q\"",
+    };
+    for (inputs) |input| {
+        try testing.expectError(error.InvalidEscape, zyaml.parse(testing.allocator, input));
+    }
+}
+
+fn exerciseFlowOwnership(allocator: std.mem.Allocator, input: []const u8) !void {
+    const doc = try zyaml.parse(allocator, input);
+    defer doc.deinit();
+}
+
+test "parse flow insertion failures release untransferred containers" {
+    try testing.checkAllAllocationFailures(testing.allocator, exerciseFlowOwnership, .{"[[1], {b: [2]}]"});
+}

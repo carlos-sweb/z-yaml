@@ -336,16 +336,19 @@ fn parseFlowValue(allocator: Allocator, s: []const u8) YamlError!FlowResult {
                 defer allocator.free(key_r.text);
                 i += key_r.consumed;
                 skipFlowSpace(t, &i);
-                if (i >= t.len or t[i] != ':') return YamlError.UnexpectedToken;
+                if (i >= t.len) return YamlError.UnexpectedEnd;
+                if (t[i] != ':') return YamlError.UnexpectedToken;
                 i += 1;
                 skipFlowSpace(t, &i);
-                const val = try parseFlowValue(allocator, t[i..]);
-                errdefer val.value.deinit();
-                i += val.consumed;
-                obj.object.value.set(key_r.text, val.value) catch |e| switch (e) {
-                    error.OutOfMemory => return error.OutOfMemory,
-                    else => unreachable, // a freshly-created object is never sealed/frozen
-                };
+                {
+                    const val = try parseFlowValue(allocator, t[i..]);
+                    errdefer val.value.deinit();
+                    i += val.consumed;
+                    obj.object.value.set(key_r.text, val.value) catch |e| switch (e) {
+                        error.OutOfMemory => return error.OutOfMemory,
+                        else => unreachable, // a freshly-created object is never sealed/frozen
+                    };
+                }
                 skipFlowSpace(t, &i);
                 if (i >= t.len) return YamlError.UnexpectedEnd;
                 if (t[i] == ',') {
@@ -368,10 +371,12 @@ fn parseFlowValue(allocator: Allocator, s: []const u8) YamlError!FlowResult {
             if (i < t.len and t[i] == ']') return .{ .value = arr, .consumed = trimmed_start + i + 1 };
             while (true) {
                 skipFlowSpace(t, &i);
-                const val = try parseFlowValue(allocator, t[i..]);
-                errdefer val.value.deinit();
-                i += val.consumed;
-                _ = try arr.array.value.push(val.value);
+                {
+                    const val = try parseFlowValue(allocator, t[i..]);
+                    errdefer val.value.deinit();
+                    i += val.consumed;
+                    _ = try arr.array.value.push(val.value);
+                }
                 skipFlowSpace(t, &i);
                 if (i >= t.len) return YamlError.UnexpectedEnd;
                 if (t[i] == ',') {
