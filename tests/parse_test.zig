@@ -244,3 +244,31 @@ fn exerciseFlowOwnership(allocator: std.mem.Allocator, input: []const u8) !void 
 test "parse flow insertion failures release untransferred containers" {
     try testing.checkAllAllocationFailures(testing.allocator, exerciseFlowOwnership, .{"[[1], {b: [2]}]"});
 }
+
+test "parse duplicate block key releases replaced string" {
+    const doc = try zyaml.parse(testing.allocator, "a: first\na: second");
+    defer doc.deinit();
+    try testing.expectEqualStrings("second", doc.object.value.get("a").?.string.value.data);
+}
+
+test "parse duplicate flow key releases replaced string" {
+    const doc = try zyaml.parse(testing.allocator, "{a: first, a: second}");
+    defer doc.deinit();
+    try testing.expectEqualStrings("second", doc.object.value.get("a").?.string.value.data);
+}
+
+test "parse duplicate keys recursively release replaced subtrees" {
+    const inputs = [_][]const u8{
+        "a:\n  items: [first, {nested: value}]\na: second",
+        "{a: {items: [first, {nested: value}]}, a: second}",
+    };
+    for (inputs) |input| {
+        const doc = try zyaml.parse(testing.allocator, input);
+        defer doc.deinit();
+        try testing.expectEqualStrings("second", doc.object.value.get("a").?.string.value.data);
+    }
+}
+
+test "parse duplicate key replacement is safe under allocation failure" {
+    try testing.checkAllAllocationFailures(testing.allocator, exerciseFlowOwnership, .{"{a: [1], a: [2]}"});
+}
