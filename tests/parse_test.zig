@@ -272,3 +272,13 @@ test "parse duplicate keys recursively release replaced subtrees" {
 test "parse duplicate key replacement is safe under allocation failure" {
     try testing.checkAllAllocationFailures(testing.allocator, exerciseFlowOwnership, .{"{a: [1], a: [2]}"});
 }
+
+test "parse strings and replaced subtrees survive every allocation failure" {
+    const inputs = [_][]const u8{
+        "a: hello\na: {b: [world]}",
+        "{a: hello, a: {b: [world]}}",
+    };
+    for (inputs) |input| {
+        try testing.checkAllAllocationFailures(testing.allocator, exerciseFlowOwnership, .{input});
+    }
+}

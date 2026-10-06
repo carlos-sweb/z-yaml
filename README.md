@@ -57,9 +57,34 @@ const out = try zyaml.stringify(allocator, doc);
 defer allocator.free(out);
 ```
 
+## Dependencies and validation
+
+`zvalue` is downloaded from GitHub at commit
+`872b0340f283309158e3eb48483ee430a3cac5e2`, with the package hash pinned in
+`build.zig.zon`. A sibling `../z-value` checkout is no longer used.
+
+That upstream revision still declares its own dependencies as sibling paths.
+Keep `z-array`, `z-object`, `z-regex`, `z-string`, `z-symbol`, `z-map`, `z-set`,
+`z-error`, `z-date`, `z-promise`, `z-bigint`, `z-buffer`, `z-temporal`,
+`z-number` and `z-equality` checked out next to `z-yaml`, then run:
+
+```sh
+python3 tools/prepare-zvalue-deps.py
+zig build test --summary all
 ```
-zig build test    # unit + roundtrip tests
-```
+
+The setup script only creates symlinks inside `z-yaml/zig-pkg`; it does not
+modify the downloaded package or the sibling repositories. `znumber` remains
+the local dependency declared in this project's manifest. The transitive
+dependencies remain local, so this setup is not a standalone remote build.
+
+The reviewed `z-value` contract preserves `newString`, `newArray`, `newObject`
+and explicit `retain`/`deinit` ownership. Constructors clean up their own
+payloads on allocation failure, and `deinit` releases nested values iteratively.
+Raw container APIs still leave ownership with the caller on error; the parser's
+private `setOwned` helper follows that convention and releases replaced values.
+The new `JSValue.objectSet` wrapper instead consumes its argument even on error;
+it must not be combined with a caller's `errdefer` for the same reference.
 
 ## Roadmap
 
