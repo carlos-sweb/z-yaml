@@ -312,6 +312,18 @@ fn trimSpaces(s: []const u8) []const u8 {
 
 const FlowResult = struct { value: JSValue, consumed: usize };
 
+/// Only for this parser's fresh objects: consumes value on success, not on error.
+fn setOwned(obj: *JSValue, key: []const u8, value: JSValue) YamlError!void {
+    const object = &obj.object.value;
+    const key_copy = try object.allocator.dupe(u8, key);
+    errdefer object.allocator.free(key_copy);
+    if (try object.properties.fetchPut(object.allocator, key_copy, .{ .value = value, .descriptor = .{} })) |previous| {
+        // fetchPut keeps the stored key when replacing; the new copy is unused.
+        object.allocator.free(key_copy);
+        previous.value.value.deinit();
+    }
+}
+
 /// Parses one flow-context value (used inside `{}`/`[]`, and as the return
 /// path for a bare `{...}`/`[...]` appearing as a whole scalar/value).
 fn parseFlowValue(allocator: Allocator, s: []const u8) YamlError!FlowResult {
@@ -336,16 +348,16 @@ fn parseFlowValue(allocator: Allocator, s: []const u8) YamlError!FlowResult {
                 defer allocator.free(key_r.text);
                 i += key_r.consumed;
                 skipFlowSpace(t, &i);
-                if (i >= t.len or t[i] != ':') return YamlError.UnexpectedToken;
+                if (i >= t.len) return YamlError.UnexpectedEnd;
+                if (t[i] != ':') return YamlError.UnexpectedToken;
                 i += 1;
                 skipFlowSpace(t, &i);
-                const val = try parseFlowValue(allocator, t[i..]);
-                errdefer val.value.deinit();
-                i += val.consumed;
-                obj.object.value.set(key_r.text, val.value) catch |e| switch (e) {
-                    error.OutOfMemory => return error.OutOfMemory,
-                    else => unreachable, // a freshly-created object is never sealed/frozen
-                };
+                {
+                    const val = try parseFlowValue(allocator, t[i..]);
+                    errdefer val.value.deinit();
+                    i += val.consumed;
+                    try setOwned(&obj, key_r.text, val.value);
+                }
                 skipFlowSpace(t, &i);
                 if (i >= t.len) return YamlError.UnexpectedEnd;
                 if (t[i] == ',') {
@@ -368,10 +380,12 @@ fn parseFlowValue(allocator: Allocator, s: []const u8) YamlError!FlowResult {
             if (i < t.len and t[i] == ']') return .{ .value = arr, .consumed = trimmed_start + i + 1 };
             while (true) {
                 skipFlowSpace(t, &i);
-                const val = try parseFlowValue(allocator, t[i..]);
-                errdefer val.value.deinit();
-                i += val.consumed;
-                _ = try arr.array.value.push(val.value);
+                {
+                    const val = try parseFlowValue(allocator, t[i..]);
+                    errdefer val.value.deinit();
+                    i += val.consumed;
+                    _ = try arr.array.value.push(val.value);
+                }
                 skipFlowSpace(t, &i);
                 if (i >= t.len) return YamlError.UnexpectedEnd;
                 if (t[i] == ',') {
@@ -613,10 +627,7 @@ const BlockParser = struct {
         else
             try parseWholeValue(self.allocator, value_text);
         errdefer value.deinit();
-        obj.object.value.set(key, value) catch |e| switch (e) {
-            error.OutOfMemory => return error.OutOfMemory,
-            else => unreachable, // a freshly-created object is never sealed/frozen
-        };
+        try setOwned(obj, key, value);
     }
 };
 

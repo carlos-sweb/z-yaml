@@ -8,10 +8,14 @@
         "build.zig",
         "build.zig.zon",
         "src/",
+        "tools/",
         "README.md",
     },
     .dependencies = .{
-        .zvalue = .{ .path = "../z-value" },
+        .zvalue = .{
+            .url = "https://github.com/carlos-sweb/z-value/archive/872b0340f283309158e3eb48483ee430a3cac5e2.tar.gz",
+            .hash = "zvalue-0.1.0-DI9Atae1AQCwX_wkFHQLcO6JSA50aKUo84n0akxVMnDW",
+        },
         .znumber = .{ .path = "../z-number" },
     },
 }
