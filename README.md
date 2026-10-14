@@ -1,9 +1,10 @@
 # Z-YAML
 
-[![Zig Version](https://img.shields.io/badge/zig-0.16-orange.svg)](https://ziglang.org/)
+[![Zig Version](https://img.shields.io/badge/zig-0.17.0-orange.svg)](https://ziglang.org/)
+[![API docs](https://img.shields.io/badge/API-Zig_docs-blue.svg)](https://carlos-sweb.github.io/z-yaml/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A **pure-Zig, dependency-free YAML *subset*** parser/stringifier over [z-value](https://github.com/carlos-sweb/z-value)'s `JSValue`, in Zig 0.16, part of the [z-*](https://github.com/carlos-sweb) micro-library ecosystem.
+A **pure-Zig, dependency-free YAML *subset*** parser/stringifier over [z-value](https://github.com/carlos-sweb/z-value)'s `JSValue`, in Zig 0.17.0, part of the [z-*](https://github.com/carlos-sweb) micro-library ecosystem.
 
 ## Why a subset, and why not bind libyaml
 
@@ -59,24 +60,14 @@ defer allocator.free(out);
 
 ## Dependencies and validation
 
-`zvalue` is downloaded from GitHub at commit
-`872b0340f283309158e3eb48483ee430a3cac5e2`, with the package hash pinned in
-`build.zig.zon`. A sibling `../z-value` checkout is no longer used.
-
-That upstream revision still declares its own dependencies as sibling paths.
-Keep `z-array`, `z-object`, `z-regex`, `z-string`, `z-symbol`, `z-map`, `z-set`,
-`z-error`, `z-date`, `z-promise`, `z-bigint`, `z-buffer`, `z-temporal`,
-`z-number` and `z-equality` checked out next to `z-yaml`, then run:
+Requires Zig 0.17.0 or newer. `zvalue` and `znumber` are downloaded from
+GitHub release `v0.1.0`, with URLs and package hashes pinned in `build.zig.zon`.
+All transitive dependencies are fetched from GitHub; sibling checkouts and
+symlink setup are no longer required.
 
 ```sh
-python3 tools/prepare-zvalue-deps.py
 zig build test --summary all
 ```
-
-The setup script only creates symlinks inside `z-yaml/zig-pkg`; it does not
-modify the downloaded package or the sibling repositories. `znumber` remains
-the local dependency declared in this project's manifest. The transitive
-dependencies remain local, so this setup is not a standalone remote build.
 
 The reviewed `z-value` contract preserves `newString`, `newArray`, `newObject`
 and explicit `retain`/`deinit` ownership. Constructors clean up their own
@@ -94,3 +85,19 @@ it must not be combined with a caller's `errdefer` for the same reference.
 ## License
 
 MIT
+
+## API documentation
+
+[Browse the generated Zig API documentation](https://carlos-sweb.github.io/z-yaml/).
+
+Generate the same documentation locally with Zig 0.17.0:
+
+```sh
+zig build docs
+python3 -m http.server 8000 --directory zig-out/docs
+```
+
+Open `http://localhost:8000/` to browse it. GitHub Actions runs the tests,
+generates the native Zig docs, and publishes `zig-out/docs` to GitHub Pages
+automatically on every push to `master`. Pull requests also validate tests
+and documentation generation.

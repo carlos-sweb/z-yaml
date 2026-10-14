@@ -11,9 +11,23 @@ pub fn build(b: *std.Build) void {
 
     const zyaml_module = b.addModule("zyaml", .{
         .root_source_file = b.path("src/zyaml.zig"),
+        .target = target,
+        .optimize = optimize,
     });
     zyaml_module.addImport("zvalue", zvalue_module);
     zyaml_module.addImport("znumber", znumber_module);
+
+    const docs_library = b.addLibrary(.{
+        .name = "zyaml",
+        .root_module = zyaml_module,
+    });
+    const install_docs = b.addInstallDirectory(.{
+        .source_dir = docs_library.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    });
+    const docs_step = b.step("docs", "Generate Zig API documentation");
+    docs_step.dependOn(&install_docs.step);
 
     const test_step = b.step("test", "Run all tests");
 

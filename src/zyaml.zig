@@ -39,6 +39,9 @@ const zvalue = @import("zvalue");
 const znumber = @import("znumber");
 const JSValue = zvalue.JSValue;
 
+/// Errors reported while parsing or serializing YAML values.
+/// OutOfMemory indicates allocation failure; other members describe invalid
+/// input, unsupported values or syntax, and serialization constraints.
 pub const YamlError = error{
     /// A line mixes tabs into its leading indentation -- YAML forbids tabs
     /// for indentation (unlike inside flow collections/quoted strings).
@@ -636,6 +639,9 @@ const BlockParser = struct {
 /// like any other `JSValue` tree. Only the FIRST `---`-delimited document
 /// in a multi-document stream is parsed (a real limitation, documented --
 /// full multi-document support is future work).
+/// `allocator` owns the returned tree; `text` is borrowed for this call.
+/// Release the returned value with `deinit()`. Malformed or unsupported input
+/// returns `YamlError`; allocation failure returns `OutOfMemory`.
 pub fn parse(allocator: Allocator, text: []const u8) YamlError!JSValue {
     const lines = try splitLines(text);
     defer std.heap.page_allocator.free(lines);
@@ -693,7 +699,7 @@ fn writeScalarKeyOrFlowString(allocator: Allocator, buf: *std.ArrayList(u8), s: 
 
 fn writeScalar(allocator: Allocator, buf: *std.ArrayList(u8), value: JSValue) YamlError!void {
     switch (value) {
-        .@"undefined", .@"null", .symbol, .function => try buf.appendSlice(allocator, "null"),
+        .undefined, .null, .symbol, .function => try buf.appendSlice(allocator, "null"),
         .boolean => |b| try buf.appendSlice(allocator, if (b) "true" else "false"),
         .number => |n| {
             if (std.math.isNan(n) or std.math.isInf(n)) {
@@ -819,6 +825,10 @@ fn writeBlockInline(allocator: Allocator, buf: *std.ArrayList(u8), value: JSValu
 /// inverse of `parse` for everything in this module's subset -- a value
 /// built by `parse` round-trips through `stringify`+`parse` unchanged,
 /// modulo comments/formatting (which YAML doesn't preserve either way).
+/// `value` is borrowed and remains owned by the caller. `allocator` allocates
+/// the returned buffer; release it with `allocator.free()`.
+/// Supported values follow the subset described in the module documentation.
+/// Allocation failure returns `OutOfMemory`.
 pub fn stringify(allocator: Allocator, value: JSValue) YamlError![]u8 {
     var buf: std.ArrayList(u8) = .empty;
     errdefer buf.deinit(allocator);

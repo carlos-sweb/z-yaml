@@ -1,21 +1,24 @@
 .{
     .name = .zyaml,
     .version = "0.1.0",
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0",
     .fingerprint = 0xbe3579ebe23ce35c,
     .description = "Pure-Zig, dependency-free YAML subset parser/stringifier over JSValue",
     .paths = .{
         "build.zig",
         "build.zig.zon",
         "src/",
-        "tools/",
+        "tests/",
         "README.md",
     },
     .dependencies = .{
         .zvalue = .{
-            .url = "https://github.com/carlos-sweb/z-value/archive/872b0340f283309158e3eb48483ee430a3cac5e2.tar.gz",
-            .hash = "zvalue-0.1.0-DI9Atae1AQCwX_wkFHQLcO6JSA50aKUo84n0akxVMnDW",
+            .url = "https://github.com/carlos-sweb/z-value/archive/refs/tags/v0.1.0.tar.gz",
+            .hash = "zvalue-0.1.0-DI9AtcjRAQD7dtSrV5Y8hmAAMI7_C3iLOiT24htJbU9T",
         },
-        .znumber = .{ .path = "../z-number" },
+        .znumber = .{
+            .url = "https://github.com/carlos-sweb/z-number/archive/refs/tags/v0.1.0.tar.gz",
+            .hash = "znumber-0.1.0-ZBd29k1PdAD3V_SXlyBTBM0R0duQq2PMC4bOHMNch2Yd",
+        },
     },
 }
