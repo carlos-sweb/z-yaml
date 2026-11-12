@@ -387,7 +387,7 @@ fn parseFlowValue(allocator: Allocator, s: []const u8) YamlError!FlowResult {
                     const val = try parseFlowValue(allocator, t[i..]);
                     errdefer val.value.deinit();
                     i += val.consumed;
-                    _ = try arr.array.value.push(val.value);
+                    _ = arr.array.value.push(val.value) catch return YamlError.OutOfMemory;
                 }
                 skipFlowSpace(t, &i);
                 if (i >= t.len) return YamlError.UnexpectedEnd;
@@ -569,7 +569,7 @@ const BlockParser = struct {
                 // "- " alone: the item is a nested block at greater indent.
                 const item = try self.parseNode(indent + 1);
                 errdefer item.deinit();
-                _ = try arr.array.value.push(item);
+                _ = arr.array.value.push(item) catch return YamlError.OutOfMemory;
                 continue;
             }
             // "- key: value" (sequence of mappings, ubiquitous in real
@@ -579,12 +579,12 @@ const BlockParser = struct {
             if (looksLikeMappingKeyLine(rest)) {
                 const item = try self.parseMappingWithFirst(indent + 2, rest);
                 errdefer item.deinit();
-                _ = try arr.array.value.push(item);
+                _ = arr.array.value.push(item) catch return YamlError.OutOfMemory;
                 continue;
             }
             const item = try parseWholeValue(self.allocator, rest);
             errdefer item.deinit();
-            _ = try arr.array.value.push(item);
+            _ = arr.array.value.push(item) catch return YamlError.OutOfMemory;
         }
         return arr;
     }
