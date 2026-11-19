@@ -48,8 +48,8 @@ test "stringify a flat mapping" {
     const allocator = testing.allocator;
     var obj = try JSValue.newObject(allocator);
     defer obj.deinit();
-    try obj.object.value.set("name", try JSValue.newString(allocator, "Ada"));
-    try obj.object.value.set("age", JSValue.fromNumber(36));
+    try obj.asObject().value.set("name", try JSValue.newString(allocator, "Ada"));
+    try obj.asObject().value.set("age", JSValue.fromNumber(36));
 
     const out = try zyaml.stringify(allocator, obj);
     defer allocator.free(out);
@@ -60,8 +60,8 @@ test "stringify a sequence of scalars" {
     const allocator = testing.allocator;
     var arr = try JSValue.newArray(allocator);
     defer arr.deinit();
-    _ = try arr.array.value.push(JSValue.fromNumber(1));
-    _ = try arr.array.value.push(JSValue.fromNumber(2));
+    _ = try arr.asArray().value.push(JSValue.fromNumber(1));
+    _ = try arr.asArray().value.push(JSValue.fromNumber(2));
 
     const out = try zyaml.stringify(allocator, arr);
     defer allocator.free(out);
@@ -71,10 +71,10 @@ test "stringify a sequence of scalars" {
 test "stringify a nested mapping" {
     const allocator = testing.allocator;
     var inner = try JSValue.newObject(allocator);
-    try inner.object.value.set("host", try JSValue.newString(allocator, "localhost"));
+    try inner.asObject().value.set("host", try JSValue.newString(allocator, "localhost"));
     var outer = try JSValue.newObject(allocator);
     defer outer.deinit();
-    try outer.object.value.set("server", inner);
+    try outer.asObject().value.set("server", inner);
 
     const out = try zyaml.stringify(allocator, outer);
     defer allocator.free(out);
