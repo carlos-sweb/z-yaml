@@ -317,7 +317,7 @@ const FlowResult = struct { value: JSValue, consumed: usize };
 
 /// Only for this parser's fresh objects: consumes value on success, not on error.
 fn setOwned(obj: *JSValue, key: []const u8, value: JSValue) YamlError!void {
-    const object = &obj.object.value;
+    const object = &obj.asObject().value;
     const key_copy = try object.allocator.dupe(u8, key);
     errdefer object.allocator.free(key_copy);
     if (try object.properties.fetchPut(object.allocator, key_copy, .{ .value = value, .descriptor = .{} })) |previous| {
@@ -387,7 +387,7 @@ fn parseFlowValue(allocator: Allocator, s: []const u8) YamlError!FlowResult {
                     const val = try parseFlowValue(allocator, t[i..]);
                     errdefer val.value.deinit();
                     i += val.consumed;
-                    _ = arr.array.value.push(val.value) catch return YamlError.OutOfMemory;
+                    _ = arr.asArray().value.push(val.value) catch return YamlError.OutOfMemory;
                 }
                 skipFlowSpace(t, &i);
                 if (i >= t.len) return YamlError.UnexpectedEnd;
@@ -569,7 +569,7 @@ const BlockParser = struct {
                 // "- " alone: the item is a nested block at greater indent.
                 const item = try self.parseNode(indent + 1);
                 errdefer item.deinit();
-                _ = arr.array.value.push(item) catch return YamlError.OutOfMemory;
+                _ = arr.asArray().value.push(item) catch return YamlError.OutOfMemory;
                 continue;
             }
             // "- key: value" (sequence of mappings, ubiquitous in real
@@ -579,12 +579,12 @@ const BlockParser = struct {
             if (looksLikeMappingKeyLine(rest)) {
                 const item = try self.parseMappingWithFirst(indent + 2, rest);
                 errdefer item.deinit();
-                _ = arr.array.value.push(item) catch return YamlError.OutOfMemory;
+                _ = arr.asArray().value.push(item) catch return YamlError.OutOfMemory;
                 continue;
             }
             const item = try parseWholeValue(self.allocator, rest);
             errdefer item.deinit();
-            _ = arr.array.value.push(item) catch return YamlError.OutOfMemory;
+            _ = arr.asArray().value.push(item) catch return YamlError.OutOfMemory;
         }
         return arr;
     }
@@ -698,7 +698,7 @@ fn writeScalarKeyOrFlowString(allocator: Allocator, buf: *std.ArrayList(u8), s: 
 }
 
 fn writeScalar(allocator: Allocator, buf: *std.ArrayList(u8), value: JSValue) YamlError!void {
-    switch (value) {
+    switch (value.unpack()) {
         .undefined, .null, .symbol, .function => try buf.appendSlice(allocator, "null"),
         .boolean => |b| try buf.appendSlice(allocator, if (b) "true" else "false"),
         .number => |n| {
@@ -727,7 +727,7 @@ fn writeScalar(allocator: Allocator, buf: *std.ArrayList(u8), value: JSValue) Ya
 }
 
 fn isScalar(value: JSValue) bool {
-    return switch (value) {
+    return switch (value.tag()) {
         .array, .object => false,
         else => true,
     };
@@ -738,7 +738,7 @@ fn writeIndent(allocator: Allocator, buf: *std.ArrayList(u8), depth: usize) !voi
 }
 
 fn writeBlock(allocator: Allocator, buf: *std.ArrayList(u8), value: JSValue, depth: usize) YamlError!void {
-    switch (value) {
+    switch (value.unpack()) {
         .array => |box| {
             const items = box.value.toSlice();
             if (items.len == 0) {
@@ -792,7 +792,7 @@ fn writeBlock(allocator: Allocator, buf: *std.ArrayList(u8), value: JSValue, dep
 /// container's first line shares the "- " prefix already written; the
 /// rest lines up at `depth` (which already accounts for the extra indent).
 fn writeBlockInline(allocator: Allocator, buf: *std.ArrayList(u8), value: JSValue, depth: usize) YamlError!void {
-    switch (value) {
+    switch (value.unpack()) {
         .object => |box| {
             const keys = try box.value.keys(allocator);
             defer allocator.free(keys);

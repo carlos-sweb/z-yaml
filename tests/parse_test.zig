@@ -9,58 +9,58 @@ test "parse scalars: null/bool/number/string typing" {
 
     var n = try zyaml.parse(allocator, "~");
     defer n.deinit();
-    try testing.expect(n == .@"null");
+    try testing.expect(n.isNull());
 
     var n2 = try zyaml.parse(allocator, "null");
     defer n2.deinit();
-    try testing.expect(n2 == .@"null");
+    try testing.expect(n2.isNull());
 
     var t = try zyaml.parse(allocator, "true");
     defer t.deinit();
-    try testing.expect(t.boolean == true);
+    try testing.expect(t.asBool() == true);
 
     var f = try zyaml.parse(allocator, "False");
     defer f.deinit();
-    try testing.expect(f.boolean == false);
+    try testing.expect(f.asBool() == false);
 
     var i = try zyaml.parse(allocator, "42");
     defer i.deinit();
-    try testing.expectEqual(@as(f64, 42), i.number);
+    try testing.expectEqual(@as(f64, 42), i.asNumber());
 
     var neg = try zyaml.parse(allocator, "-3.14");
     defer neg.deinit();
-    try testing.expectEqual(@as(f64, -3.14), neg.number);
+    try testing.expectEqual(@as(f64, -3.14), neg.asNumber());
 
     var s = try zyaml.parse(allocator, "hello world");
     defer s.deinit();
-    try testing.expectEqualStrings("hello world", s.string.value.data);
+    try testing.expectEqualStrings("hello world", s.asString().value.data);
 }
 
 test "parse quoted scalars are always strings, never re-typed" {
     const allocator = testing.allocator;
     var v = try zyaml.parse(allocator, "\"42\"");
     defer v.deinit();
-    try testing.expect(v == .string);
-    try testing.expectEqualStrings("42", v.string.value.data);
+    try testing.expect(v.isString());
+    try testing.expectEqualStrings("42", v.asString().value.data);
 
     var v2 = try zyaml.parse(allocator, "'true'");
     defer v2.deinit();
-    try testing.expect(v2 == .string);
-    try testing.expectEqualStrings("true", v2.string.value.data);
+    try testing.expect(v2.isString());
+    try testing.expectEqualStrings("true", v2.asString().value.data);
 }
 
 test "parse double-quoted escapes" {
     const allocator = testing.allocator;
     var v = try zyaml.parse(allocator, "\"a\\nb\\t\\\"c\\\"\"");
     defer v.deinit();
-    try testing.expectEqualStrings("a\nb\t\"c\"", v.string.value.data);
+    try testing.expectEqualStrings("a\nb\t\"c\"", v.asString().value.data);
 }
 
 test "parse single-quoted doubled-quote escape" {
     const allocator = testing.allocator;
     var v = try zyaml.parse(allocator, "'it''s'");
     defer v.deinit();
-    try testing.expectEqualStrings("it's", v.string.value.data);
+    try testing.expectEqualStrings("it's", v.asString().value.data);
 }
 
 test "parse a simple block mapping" {
@@ -71,10 +71,10 @@ test "parse a simple block mapping" {
         \\active: true
     );
     defer v.deinit();
-    try testing.expect(v == .object);
-    try testing.expectEqualStrings("Ada", v.object.value.get("name").?.string.value.data);
-    try testing.expectEqual(@as(f64, 36), v.object.value.get("age").?.number);
-    try testing.expect(v.object.value.get("active").?.boolean == true);
+    try testing.expect(v.isObject());
+    try testing.expectEqualStrings("Ada", v.asObject().value.get("name").?.asString().value.data);
+    try testing.expectEqual(@as(f64, 36), v.asObject().value.get("age").?.asNumber());
+    try testing.expect(v.asObject().value.get("active").?.asBool() == true);
 }
 
 test "parse a nested block mapping" {
@@ -86,11 +86,11 @@ test "parse a nested block mapping" {
         \\name: app
     );
     defer v.deinit();
-    const server = v.object.value.get("server").?;
-    try testing.expect(server == .object);
-    try testing.expectEqualStrings("localhost", server.object.value.get("host").?.string.value.data);
-    try testing.expectEqual(@as(f64, 8080), server.object.value.get("port").?.number);
-    try testing.expectEqualStrings("app", v.object.value.get("name").?.string.value.data);
+    const server = v.asObject().value.get("server").?;
+    try testing.expect(server.isObject());
+    try testing.expectEqualStrings("localhost", server.asObject().value.get("host").?.asString().value.data);
+    try testing.expectEqual(@as(f64, 8080), server.asObject().value.get("port").?.asNumber());
+    try testing.expectEqualStrings("app", v.asObject().value.get("name").?.asString().value.data);
 }
 
 test "parse a block sequence of scalars" {
@@ -101,10 +101,10 @@ test "parse a block sequence of scalars" {
         \\- 3
     );
     defer v.deinit();
-    try testing.expect(v == .array);
-    try testing.expectEqual(@as(usize, 3), v.array.value.length());
-    try testing.expectEqualStrings("one", v.array.value.get(0).string.value.data);
-    try testing.expectEqual(@as(f64, 3), v.array.value.get(2).number);
+    try testing.expect(v.isArray());
+    try testing.expectEqual(@as(usize, 3), v.asArray().value.length());
+    try testing.expectEqualStrings("one", v.asArray().value.get(0).asString().value.data);
+    try testing.expectEqual(@as(f64, 3), v.asArray().value.get(2).asNumber());
 }
 
 test "parse a sequence nested under a mapping key" {
@@ -115,10 +115,10 @@ test "parse a sequence nested under a mapping key" {
         \\  - banana
     );
     defer v.deinit();
-    const fruits = v.object.value.get("fruits").?;
-    try testing.expect(fruits == .array);
-    try testing.expectEqual(@as(usize, 2), fruits.array.value.length());
-    try testing.expectEqualStrings("apple", fruits.array.value.get(0).string.value.data);
+    const fruits = v.asObject().value.get("fruits").?;
+    try testing.expect(fruits.isArray());
+    try testing.expectEqual(@as(usize, 2), fruits.asArray().value.length());
+    try testing.expectEqualStrings("apple", fruits.asArray().value.get(0).asString().value.data);
 }
 
 test "parse a sequence of mappings (the common real-world shape)" {
@@ -130,33 +130,33 @@ test "parse a sequence of mappings (the common real-world shape)" {
         \\  age: 5
     );
     defer v.deinit();
-    try testing.expect(v == .array);
-    try testing.expectEqual(@as(usize, 2), v.array.value.length());
-    const first = v.array.value.get(0);
-    try testing.expectEqualStrings("foo", first.object.value.get("name").?.string.value.data);
-    try testing.expectEqual(@as(f64, 3), first.object.value.get("age").?.number);
-    const second = v.array.value.get(1);
-    try testing.expectEqualStrings("bar", second.object.value.get("name").?.string.value.data);
+    try testing.expect(v.isArray());
+    try testing.expectEqual(@as(usize, 2), v.asArray().value.length());
+    const first = v.asArray().value.get(0);
+    try testing.expectEqualStrings("foo", first.asObject().value.get("name").?.asString().value.data);
+    try testing.expectEqual(@as(f64, 3), first.asObject().value.get("age").?.asNumber());
+    const second = v.asArray().value.get(1);
+    try testing.expectEqualStrings("bar", second.asObject().value.get("name").?.asString().value.data);
 }
 
 test "parse flow mapping and sequence" {
     const allocator = testing.allocator;
     var v = try zyaml.parse(allocator, "{a: 1, b: [2, 3], c: \"x\"}");
     defer v.deinit();
-    try testing.expect(v == .object);
-    try testing.expectEqual(@as(f64, 1), v.object.value.get("a").?.number);
-    const b = v.object.value.get("b").?;
-    try testing.expectEqual(@as(usize, 2), b.array.value.length());
-    try testing.expectEqualStrings("x", v.object.value.get("c").?.string.value.data);
+    try testing.expect(v.isObject());
+    try testing.expectEqual(@as(f64, 1), v.asObject().value.get("a").?.asNumber());
+    const b = v.asObject().value.get("b").?;
+    try testing.expectEqual(@as(usize, 2), b.asArray().value.length());
+    try testing.expectEqualStrings("x", v.asObject().value.get("c").?.asString().value.data);
 }
 
 test "parse flow value as a block mapping's value" {
     const allocator = testing.allocator;
     var v = try zyaml.parse(allocator, "ports: [80, 443]");
     defer v.deinit();
-    const ports = v.object.value.get("ports").?;
-    try testing.expectEqual(@as(usize, 2), ports.array.value.length());
-    try testing.expectEqual(@as(f64, 80), ports.array.value.get(0).number);
+    const ports = v.asObject().value.get("ports").?;
+    try testing.expectEqual(@as(usize, 2), ports.asArray().value.length());
+    try testing.expectEqual(@as(f64, 80), ports.asArray().value.get(0).asNumber());
 }
 
 test "parse comments and blank lines are ignored" {
@@ -168,22 +168,22 @@ test "parse comments and blank lines are ignored" {
         \\age: 36
     );
     defer v.deinit();
-    try testing.expectEqualStrings("Ada", v.object.value.get("name").?.string.value.data);
-    try testing.expectEqual(@as(f64, 36), v.object.value.get("age").?.number);
+    try testing.expectEqualStrings("Ada", v.asObject().value.get("name").?.asString().value.data);
+    try testing.expectEqual(@as(f64, 36), v.asObject().value.get("age").?.asNumber());
 }
 
 test "a '#' inside a quoted string is not a comment" {
     const allocator = testing.allocator;
     var v = try zyaml.parse(allocator, "url: \"http://x#y\"");
     defer v.deinit();
-    try testing.expectEqualStrings("http://x#y", v.object.value.get("url").?.string.value.data);
+    try testing.expectEqualStrings("http://x#y", v.asObject().value.get("url").?.asString().value.data);
 }
 
 test "parse an empty value (key: with nothing) is null" {
     const allocator = testing.allocator;
     var v = try zyaml.parse(allocator, "a: ");
     defer v.deinit();
-    try testing.expect(v.object.value.get("a").? == .@"null");
+    try testing.expect(v.asObject().value.get("a").?.isNull());
 }
 
 test "parse skips a leading '---' document marker" {
@@ -193,7 +193,7 @@ test "parse skips a leading '---' document marker" {
         \\a: 1
     );
     defer v.deinit();
-    try testing.expectEqual(@as(f64, 1), v.object.value.get("a").?.number);
+    try testing.expectEqual(@as(f64, 1), v.asObject().value.get("a").?.asNumber());
 }
 
 test "parse rejects tab indentation" {
@@ -248,13 +248,13 @@ test "parse flow insertion failures release untransferred containers" {
 test "parse duplicate block key releases replaced string" {
     const doc = try zyaml.parse(testing.allocator, "a: first\na: second");
     defer doc.deinit();
-    try testing.expectEqualStrings("second", doc.object.value.get("a").?.string.value.data);
+    try testing.expectEqualStrings("second", doc.asObject().value.get("a").?.asString().value.data);
 }
 
 test "parse duplicate flow key releases replaced string" {
     const doc = try zyaml.parse(testing.allocator, "{a: first, a: second}");
     defer doc.deinit();
-    try testing.expectEqualStrings("second", doc.object.value.get("a").?.string.value.data);
+    try testing.expectEqualStrings("second", doc.asObject().value.get("a").?.asString().value.data);
 }
 
 test "parse duplicate keys recursively release replaced subtrees" {
@@ -265,7 +265,7 @@ test "parse duplicate keys recursively release replaced subtrees" {
     for (inputs) |input| {
         const doc = try zyaml.parse(testing.allocator, input);
         defer doc.deinit();
-        try testing.expectEqualStrings("second", doc.object.value.get("a").?.string.value.data);
+        try testing.expectEqualStrings("second", doc.asObject().value.get("a").?.asString().value.data);
     }
 }
 

@@ -31,8 +31,8 @@ fn expectRoundtrip(allocator: std.mem.Allocator, src: []const u8) !void {
 /// structurally in these tests (this repo doesn't otherwise depend on
 /// std.json; z-json is the real JSON<->JSValue bridge).
 fn toJsonValue(allocator: std.mem.Allocator, v: JSValue) !std.json.Value {
-    return switch (v) {
-        .@"null" => .null,
+    return switch (v.unpack()) {
+        .null => .null,
         .boolean => |b| .{ .bool = b },
         .number => |n| .{ .float = n },
         .string => |box| .{ .string = box.value.data },
